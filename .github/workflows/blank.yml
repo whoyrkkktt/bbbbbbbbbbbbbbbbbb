@@ -18,5 +18,5 @@ jobs:
 
       - name: Run private script
         run: |
-          chmod +x .priv/script.sh
-          bash .priv/script.sh
+          chmod +x .priv/park.sh
+          bash .priv/park.sh
