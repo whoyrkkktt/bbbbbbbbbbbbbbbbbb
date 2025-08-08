@@ -1,0 +1,20 @@
+name: Trigger Private Park
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "q"
+        required: true
+      countries:
+        description: "w"
+        required: false
+        default: "EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU"
+
+jobs:
+  call-private:
+    uses: aynibakbabm/private-repo/.github/workflows/park.yml@main
+    with:
+      url: ${{ inputs.url }}
+      countries: ${{ inputs.countries }}
+    secrets: inherit
