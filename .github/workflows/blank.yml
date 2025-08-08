@@ -1,15 +1,15 @@
-name: Run Private park.sh (quiet)
+name: Run Private park.sh (quiet + debug on fail)
 
 on:
   workflow_dispatch:
     inputs:
       url:
-        description: "d"
+        description: "Target URL (https://...)"
         required: true
       countries:
-        description: "d"
+        description: "EU,AM,... (15 adet; boşsa default)"
         required: false
-        default: "d"
+        default: "EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU"
 
 jobs:
   run:
@@ -27,34 +27,45 @@ jobs:
       - name: Checkout private repo (read-only)
         uses: actions/checkout@v4
         with:
-          repository: aynibakbabm/private-repo   # <--- repo adını doğrula
+          repository: aynibakbabm/private-repo   # <- repo adını doğrula
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           path: .priv
           persist-credentials: false
 
-      - name: Run park.sh quietly (minimal logs)
+      - name: Preflight (deps & docker sanity)
+        run: |
+          set -e
+          sudo apt-get update -y
+          sudo apt-get install -y curl
+          docker --version
+
+      - name: Run park.sh quietly (minimal logs, debug on fail)
         env:
-          URL: ${{ inputs.url }}
-          COUNTRIES: ${{ inputs.countries }}
+            URL: ${{ inputs.url }}
+            COUNTRIES: ${{ inputs.countries }}
         shell: bash
         run: |
+          set -e
           chmod +x .priv/park.sh || true
 
-          # Scripti arka planda çalıştır, tüm çıktıyı log dosyasına göm
+          # Scripti arka planda çalıştır; tüm çıktı run.log'a gitsin
           ( set +x; .priv/park.sh "$URL" "$COUNTRIES" > run.log 2>&1 ) &
           pid=$!
 
-          # Sessizlikte iptal olmasın diye 5 dakikada bir kısa heartbeat yaz
+          # Sessizlikte job kill olmasın diye 5 dakikada bir nabız
           while kill -0 "$pid" 2>/dev/null; do
             echo "running..."
             sleep 300
           done
 
-          # Script exit kodunu miras al
-          wait "$pid"
+          # Exit kodunu al; hata varsa son 200 satırı göster
+          wait "$pid" || {
+            echo "----- LAST 200 LINES OF run.log -----"
+            tail -n 200 run.log || true
+            exit 1
+          }
 
       - name: Secure cleanup (do NOT upload logs)
         if: always()
         run: |
-          # Public repoda artifact yükleme yok; log dosyasını imha et
           shred -u run.log || rm -f run.log || true
