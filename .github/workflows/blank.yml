@@ -1,22 +1,60 @@
-name: Run Private Script
+name: Run Private park.sh (quiet)
+
 on:
   workflow_dispatch:
+    inputs:
+      url:
+        description: "Target URL (https://...)"
+        required: true
+      countries:
+        description: "EU,AM,... (15 adet; boşsa default)"
+        required: false
+        default: "EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU"
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    timeout-minutes: 370
+    permissions:
+      contents: read
 
-      - name: Checkout private repo
+    steps:
+      - name: Mask inputs in logs
+        run: |
+          echo "::add-mask::${{ inputs.url }}"
+          echo "::add-mask::${{ inputs.countries }}"
+
+      - name: Checkout private repo (read-only)
         uses: actions/checkout@v4
         with:
-          repository: aynibakbabm/private-repo
+          repository: aynibakbabm/private-repo   # <--- repo adını doğrula
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           path: .priv
           persist-credentials: false
 
-      - name: Run private script
+      - name: Run park.sh quietly (minimal logs)
+        env:
+          URL: ${{ inputs.url }}
+          COUNTRIES: ${{ inputs.countries }}
+        shell: bash
         run: |
-          chmod +x .priv/park.sh
-          bash .priv/park.sh
+          chmod +x .priv/park.sh || true
+
+          # Scripti arka planda çalıştır, tüm çıktıyı log dosyasına göm
+          ( set +x; .priv/park.sh "$URL" "$COUNTRIES" > run.log 2>&1 ) &
+          pid=$!
+
+          # Sessizlikte iptal olmasın diye 5 dakikada bir kısa heartbeat yaz
+          while kill -0 "$pid" 2>/dev/null; do
+            echo "running..."
+            sleep 300
+          done
+
+          # Script exit kodunu miras al
+          wait "$pid"
+
+      - name: Secure cleanup (do NOT upload logs)
+        if: always()
+        run: |
+          # Public repoda artifact yükleme yok; log dosyasını imha et
+          shred -u run.log || rm -f run.log || true
