@@ -1,4 +1,4 @@
-name: Run Private park.sh (quiet + debug on fail)
+name: Run Private park.sh (debug mode)
 
 on:
   workflow_dispatch:
@@ -39,33 +39,23 @@ jobs:
           sudo apt-get install -y curl
           docker --version
 
-      - name: Run park.sh quietly (minimal logs, debug on fail)
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run park.sh (debug output)
         env:
-            URL: ${{ inputs.url }}
-            COUNTRIES: ${{ inputs.countries }}
+          TARGET_URL: ${{ inputs.url }}        # scriptte TARGET_URL bekleniyor
+          COUNTRIES: ${{ inputs.countries }}
         shell: bash
         run: |
           set -e
           chmod +x .priv/park.sh || true
+          # Debug mod: tüm çıktı doğrudan loglarda
+          .priv/park.sh
 
-          # Scripti arka planda çalıştır; tüm çıktı run.log'a gitsin
-          ( set +x; .priv/park.sh "$URL" "$COUNTRIES" > run.log 2>&1 ) &
-          pid=$!
-
-          # Sessizlikte job kill olmasın diye 5 dakikada bir nabız
-          while kill -0 "$pid" 2>/dev/null; do
-            echo "running..."
-            sleep 300
-          done
-
-          # Exit kodunu al; hata varsa son 200 satırı göster
-          wait "$pid" || {
-            echo "----- LAST 200 LINES OF run.log -----"
-            tail -n 200 run.log || true
-            exit 1
-          }
-
-      - name: Secure cleanup (do NOT upload logs)
+      - name: Secure cleanup
         if: always()
         run: |
-          shred -u run.log || rm -f run.log || true
+          rm -f run.log || true
