@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       url:
-        description: "Target URL (https://...)"
+        description: "d"
         required: true
       countries:
-        description: "EU,AM,... (15 adet; boşsa default)"
+        description: "d"
         required: false
-        default: "EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU"
+        default: "d"
 
 jobs:
   run:
