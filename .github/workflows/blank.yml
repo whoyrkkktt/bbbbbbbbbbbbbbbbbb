@@ -1,13 +1,11 @@
-name: Trigger Private Park
+name: Trigger Park
 
 on:
   workflow_dispatch:
     inputs:
       url:
-        description: "q"
         required: true
       countries:
-        description: "w"
         required: false
         default: "EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU"
 
