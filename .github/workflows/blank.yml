@@ -1,18 +1,22 @@
-name: Trigger Park
-
+name: Run Private Script
 on:
   workflow_dispatch:
-    inputs:
-      url:
-        required: true
-      countries:
-        required: false
-        default: "EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU,AM,EU"
 
 jobs:
-  call-private:
-    uses: aynibakbabm/private-repo/.github/workflows/park.yml@main
-    with:
-      url: ${{ inputs.url }}
-      countries: ${{ inputs.countries }}
-    secrets: inherit
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+        with:
+          repository: aynibakbabm/private-repo
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: .priv
+          persist-credentials: false
+
+      - name: Run private script
+        run: |
+          chmod +x .priv/script.sh
+          bash .priv/script.sh
